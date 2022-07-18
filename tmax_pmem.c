@@ -2,7 +2,7 @@
  * @brief APIs to use PMEM like a volatile memory. Whenever the function is called, a temporary file is created on the PMEM and mapped to the virtual memory.
  */
 
-#include "tmax_pmem.h"
+#include <tmax_pmem.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -11,6 +11,11 @@
 #include <pthread.h>
 #include <sys/mman.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <string.h>
+
 
 /**
  * @brief Request pmem allocation. The function creates a temporary file on the PMEM and maps it to the virtual memory.
@@ -99,7 +104,7 @@ int pmem_create_tmpfile(const char *dir, int *fd)
 
     if ((*fd = mkstemp(fullname)) < 0) // Create a temporary file
     {
-        log_err("Could not create temporary file: errno=%d.", errno);
+        printf("Could not create temporary file: errno=%d.", errno);
         err = ERROR_INVALID;
         goto exit;
     }
@@ -114,7 +119,7 @@ exit:
     (void)sigprocmask(SIG_SETMASK, &oldset, NULL);
     if (*fd != -1)
         (void)close(*fd);
-    fd = -1;
+    fd = (int *)-1;
     errno = oerrno;
     return err;
 }
