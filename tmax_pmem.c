@@ -16,7 +16,6 @@
 #include <sys/types.h>
 #include <string.h>
 
-
 /**
  * @brief Request pmem allocation. The function creates a temporary file on the PMEM and maps it to the virtual memory.
  *
@@ -89,9 +88,10 @@ int pmem_create_tmpfile(const char *dir, int *fd)
     int dir_len = strlen(dir);
 
     // Check if the directory exists
-    if (access(dir, F_OK))
+    struct stat st;
+    if (stat(dir, &st))
     {
-        printf("[%s] directory %s does not exist\n", __func__, dir);
+        printf("[%s] stat failed\n", __func__);
         return ERROR_INVALID;
     }
 
