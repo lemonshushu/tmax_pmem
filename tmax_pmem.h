@@ -37,6 +37,7 @@ enum
      * Error: Unspecified run-time error.
      */
     ERROR_RUNTIME = -255
+
 };
 
 struct pmem_file

@@ -88,6 +88,13 @@ int pmem_create_tmpfile(const char *dir, int *fd)
     int oerrno;
     int dir_len = strlen(dir);
 
+    // Check if the directory exists
+    if (access(dir, F_OK))
+    {
+        printf("[%s] directory %s does not exist\n", __func__, dir);
+        return ERROR_INVALID;
+    }
+
     if (dir_len > PATH_MAX)
     {
         printf("Could not create temporary file: too long path.");
