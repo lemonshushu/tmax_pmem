@@ -4,6 +4,7 @@
 
 #include <tmax_pmem.h>
 #include <stdio.h>
+#include <string.h>
 
 int main()
 {
@@ -24,4 +25,6 @@ int main()
 
     pmem_cleanup(addr, pfile);
     return 0;
+exit:
+    return -1;
 }
