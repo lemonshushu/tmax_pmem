@@ -27,7 +27,6 @@ int main()
     strcpy(addr, str2);
     printf("[%s] addr: %s\n", __func__, (char *)addr);
 
-
     pmem_cleanup(addr, &pfile);
     return 0;
 exit:
