@@ -27,6 +27,19 @@ int main()
     strcpy(addr, str2);
     printf("[%s] addr: %s\n", __func__, (char *)addr);
 
+    // Check content inside file and print it
+    FILE *fp = fopen(pfile->fullpath, "r");
+    if (fp == NULL)
+    {
+        printf("[%s] fopen failed\n", __func__);
+        goto exit;
+    }
+    char buf[100];
+    fgets(buf, 100, fp);
+    printf("[%s] buf: %s\n", __func__, buf);
+    fclose(fp);
+
+
     pmem_cleanup(addr, &pfile);
     return 0;
 exit:

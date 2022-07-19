@@ -29,22 +29,19 @@ void *request_pmem(const char *dir, void *addr, size_t size, struct pmem_file **
 {
     int oerrno;
 
-    int fd = -1;
-
-    int err = pmem_create_tmpfile(dir, &fd);
+    *pfile_ptr = (struct pmem_file *)malloc(sizeof(struct pmem_file));
+    int err = pmem_create_tmpfile(dir, pfile_ptr);
     if (err)
         goto exit;
 
-    if (ftruncate(fd, size)) // set the size of the file
+    if (ftruncate((*pfile_ptr)->fd, size)) // set the size of the file
         goto exit;
 
-    *pfile_ptr = (struct pmem_file *)malloc(sizeof(struct pmem_file));
     if (*pfile_ptr == NULL)
     {
         err = ERROR_MALLOC;
         goto exit;
     }
-    (*pfile_ptr)->fd = fd;
     (*pfile_ptr)->offset = 0;
     (*pfile_ptr)->current_size = size;
     (*pfile_ptr)->dir = strdup(dir);
@@ -55,7 +52,7 @@ void *request_pmem(const char *dir, void *addr, size_t size, struct pmem_file **
     }
 
     // Map the file to the virtual memory
-    addr = mmap(addr, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    addr = mmap(addr, size, PROT_READ | PROT_WRITE, MAP_SHARED, (*pfile_ptr)->fd, 0);
     if (addr == MAP_FAILED)
     {
         err = ERROR_MMAP;
@@ -66,8 +63,8 @@ void *request_pmem(const char *dir, void *addr, size_t size, struct pmem_file **
 
 exit:
     oerrno = errno;
-    if (fd != -1)
-        (void)close(fd);
+    if ((*pfile_ptr)->fd != -1)
+        (void)close((*pfile_ptr)->fd);
     errno = oerrno;
     return NULL;
 }
@@ -80,7 +77,7 @@ exit:
  * @param fd File descriptor of the file.
  * @return int
  */
-int pmem_create_tmpfile(const char *dir, int *fd)
+int pmem_create_tmpfile(const char *dir, struct pmem_file **pfile_ptr)
 {
     static char template[] = "/memkind.XXXXXX";
     int err = SUCCESS;
@@ -108,25 +105,24 @@ int pmem_create_tmpfile(const char *dir, int *fd)
     sigfillset(&set);
     sigprocmask(SIG_BLOCK, &set, &oldset);
 
-    if ((*fd = mkstemp(fullname)) < 0) // Create a temporary file
+    if (((*pfile_ptr)->fd = mkstemp(fullname)) < 0) // Create a temporary file
     {
         printf("Could not create temporary file: errno=%d.", errno);
         err = ERROR_INVALID;
         goto exit;
     }
-    (void)unlink(fullname);
+    (*pfile_ptr)->fullpath = fullname;
 
     (void)sigprocmask(SIG_SETMASK, &oldset, NULL);
-    free(fullname);
 
     return err;
 
 exit:
     oerrno = errno;
     (void)sigprocmask(SIG_SETMASK, &oldset, NULL);
-    if (*fd != -1)
-        (void)close(*fd);
-    fd = (int *)-1;
+    if ((*pfile_ptr)->fd != -1)
+        (void)close((*pfile_ptr)->fd);
+    (*pfile_ptr)->fd = (int *)-1;
     errno = oerrno;
     free(fullname);
     return err;
@@ -147,7 +143,14 @@ int pmem_cleanup(void *addr, struct pmem_file **pfile_ptr)
         return ERROR_MMAP;
     }
     (void)close((*pfile_ptr)->fd);
+    // Remove the file
+    if (unlink((*pfile_ptr)->fullpath) != 0)
+    {
+        printf("[%s] unlink failed\n", __func__);
+        return ERROR_RUNTIME;
+    }
     free((*pfile_ptr)->dir);
+    free((*pfile_ptr)->fullpath);
     free(*pfile_ptr);
 
     return SUCCESS;
@@ -163,14 +166,12 @@ int pmem_cleanup(void *addr, struct pmem_file **pfile_ptr)
 static int pmem_recreate_file(struct pmem_file **pfile_ptr, size_t size)
 {
     int status = -1;
-    int fd = -1;
-    int err = pmem_create_tmpfile((*pfile_ptr)->dir, &fd);
+    int err = pmem_create_tmpfile((*pfile_ptr)->dir, pfile_ptr);
     if (err)
         goto exit;
-    if ((errno = posix_fallocate(fd, 0, (off_t)size)) != 0)
+    if ((errno = posix_fallocate((*pfile_ptr)->fd, 0, (off_t)size)) != 0)
         goto exit;
     close((*pfile_ptr)->fd);
-    (*pfile_ptr)->fd = fd;
     (*pfile_ptr)->offset = 0;
     (*pfile_ptr)->current_size = size;
     status = 0;
