@@ -25,7 +25,7 @@
  * @param pfile Pointer to the pmem_file structure.
  * @return void * The pointer to the memory allocated.
  */
-void *request_pmem(const char *dir, void *addr, size_t size, struct pmem_file *pfile)
+void *request_pmem(const char *dir, void *addr, size_t size, struct pmem_file **pfile_ptr)
 {
     int oerrno;
 
@@ -38,17 +38,17 @@ void *request_pmem(const char *dir, void *addr, size_t size, struct pmem_file *p
     if (ftruncate(fd, size)) // set the size of the file
         goto exit;
 
-    if (!(pfile = (struct pmem_file *)malloc(sizeof(struct pmem_file))))
+    *pfile_ptr = (struct pmem_file *)malloc(sizeof(struct pmem_file));
+    if (*pfile_ptr == NULL)
     {
-        printf("[%s] malloc failed\n", __func__);
+        err = ERROR_MALLOC;
         goto exit;
     }
-
-    pfile->fd = fd;
-    pfile->offset = 0;
-    pfile->current_size = size;
-    pfile->dir = strdup(dir);
-    if (!pfile->dir)
+    (*pfile_ptr)->fd = fd;
+    (*pfile_ptr)->offset = 0;
+    (*pfile_ptr)->current_size = size;
+    (*pfile_ptr)->dir = strdup(dir);
+    if (!(*pfile_ptr)->dir)
     {
         err = ERROR_MALLOC;
         goto exit;
@@ -88,11 +88,10 @@ int pmem_create_tmpfile(const char *dir, int *fd)
     int dir_len = strlen(dir);
 
     // Check if the directory exists
-    struct stat st;
-    if (stat(dir, &st))
+    if (access(dir, F_OK))
     {
-        printf("[%s] stat failed\n", __func__);
-        return ERROR_INVALID;
+        err = ERROR_INVALID;
+        goto exit;
     }
 
     if (dir_len > PATH_MAX)
@@ -101,7 +100,7 @@ int pmem_create_tmpfile(const char *dir, int *fd)
         return ERROR_INVALID;
     }
 
-    char fullname[dir_len + sizeof(template)];
+    char *fullname = (char *)malloc(dir_len + sizeof(template));
     (void)strcpy(fullname, dir);
     (void)strcat(fullname, template);
 
@@ -118,6 +117,7 @@ int pmem_create_tmpfile(const char *dir, int *fd)
     (void)unlink(fullname);
 
     (void)sigprocmask(SIG_SETMASK, &oldset, NULL);
+    free(fullname);
 
     return err;
 
@@ -128,6 +128,7 @@ exit:
         (void)close(*fd);
     fd = (int *)-1;
     errno = oerrno;
+    free(fullname);
     return err;
 }
 
@@ -138,16 +139,16 @@ exit:
  *
  * @return int
  */
-int pmem_cleanup(void *addr, struct pmem_file *pfile)
+int pmem_cleanup(void *addr, struct pmem_file **pfile_ptr)
 {
-    if (munmap(addr, pfile->current_size) != 0)
+    if (munmap(addr, (*pfile_ptr)->current_size) != 0)
     {
         printf("[%s] munmap failed\n", __func__);
         return ERROR_MMAP;
     }
-    (void)close(pfile->fd);
-    free(pfile->dir);
-    free(pfile);
+    (void)close((*pfile_ptr)->fd);
+    free((*pfile_ptr)->dir);
+    free(*pfile_ptr);
 
     return SUCCESS;
 }
@@ -159,19 +160,19 @@ int pmem_cleanup(void *addr, struct pmem_file *pfile)
  * @param size New size of the file.
  * @return int
  */
-static int pmem_recreate_file(struct pmem_file *pfile, size_t size)
+static int pmem_recreate_file(struct pmem_file **pfile_ptr, size_t size)
 {
     int status = -1;
     int fd = -1;
-    int err = pmem_create_tmpfile(pfile->dir, &fd);
+    int err = pmem_create_tmpfile((*pfile_ptr)->dir, &fd);
     if (err)
         goto exit;
     if ((errno = posix_fallocate(fd, 0, (off_t)size)) != 0)
         goto exit;
-    close(pfile->fd);
-    pfile->fd = fd;
-    pfile->offset = 0;
-    pfile->current_size = size;
+    close((*pfile_ptr)->fd);
+    (*pfile_ptr)->fd = fd;
+    (*pfile_ptr)->offset = 0;
+    (*pfile_ptr)->current_size = size;
     status = 0;
 exit:
     return status;
