@@ -15,6 +15,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <string.h>
+#include <dirent.h>
 
 /**
  * @brief Request pmem allocation. The function creates a temporary file on the PMEM and maps it to the virtual memory.
@@ -79,7 +80,7 @@ exit:
  */
 int pmem_create_tmpfile(const char *dir, struct pmem_file **pfile_ptr)
 {
-    static char template[] = "/memkind.XXXXXX";
+    static char template[] = "/pmem.XXXXXX";
     int err = SUCCESS;
     int oerrno;
     int dir_len = strlen(dir);
@@ -177,4 +178,44 @@ static int pmem_recreate_file(struct pmem_file **pfile_ptr, size_t size)
     status = 0;
 exit:
     return status;
+}
+
+/**
+ * @brief Delete all files in the directory.
+ *
+ * @param dir
+ * @return int
+ */
+int pmem_cleanup_all(const char *dir)
+{
+    int err = SUCCESS;
+    DIR *dirp = opendir(dir);
+    if (dirp == NULL)
+    {
+        err = ERROR_INVALID;
+        goto exit;
+    }
+    struct dirent *dp;
+    while ((dp = readdir(dirp)) != NULL)
+    {
+        if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0)
+            continue;
+        char *fullpath = (char *)malloc(strlen(dir) + strlen(dp->d_name) + 2);
+        (void)strcpy(fullpath, dir);
+        (void)strcat(fullpath, "/");
+        (void)strcat(fullpath, dp->d_name);
+        if (unlink(fullpath) != 0)
+        {
+            printf("[%s] unlink failed\n", __func__);
+            err = ERROR_RUNTIME;
+            goto exit;
+        }
+        free(fullpath);
+    }
+    closedir(dirp);
+
+    return err;
+
+exit:
+    return err;
 }

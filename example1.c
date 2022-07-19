@@ -11,6 +11,9 @@ int main()
     const char *dir = "/pmem/tmp/";
     const char *str1 = "Hello World";
     const char *str2 = "Changed String";
+
+    pmem_cleanup_all(dir);
+    
     struct pmem_file *pfile;
     void *addr;
     addr = request_pmem(dir, NULL, 100 * sizeof(char), &pfile);
@@ -38,7 +41,6 @@ int main()
     fgets(buf, 100, fp);
     printf("[%s] buf: %s\n", __func__, buf);
     fclose(fp);
-
 
     pmem_cleanup(addr, &pfile);
     return 0;

@@ -53,3 +53,4 @@ void *request_pmem(const char *dir, void *addr, size_t size, struct pmem_file **
 int pmem_create_tmpfile(const char *dir, struct pmem_file **pfile_ptr);
 int pmem_cleanup(void *addr, struct pmem_file **pfile_ptr);
 static int pmem_recreate_file(struct pmem_file **pfile_ptr, size_t size);
+int pmem_cleanup_all(const char *dir);
