@@ -13,10 +13,10 @@ int main()
     const char *str2 = "Changed String";
 
     pmem_cleanup_all(dir);
-    
+
     struct pmem_file *pfile;
     void *addr;
-    addr = request_pmem(dir, NULL, 100 * sizeof(char), &pfile);
+    addr = request_pmem(dir, NULL, 1024 * sizeof(char), &pfile);
     if (addr == NULL)
     {
         printf("[%s] request_pmem failed\n", __func__);
