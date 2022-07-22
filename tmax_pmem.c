@@ -25,7 +25,7 @@
  * @param pfile Pointer to the pmem_file structure.
  * @return void * The pointer to the memory allocated.
  */
-void *request_pmem(const char *dir, void *addr, size_t size, struct pmem_file **pfile_ptr)
+void *pmem_malloc(const char *dir, void *addr, size_t size, struct pmem_file **pfile_ptr)
 {
     int oerrno;
 
@@ -88,7 +88,7 @@ int pmem_create_tmpfile(const char *dir, struct pmem_file **pfile_ptr)
     if (access(dir, F_OK))
     {
         err = ERROR_INVALID;
-        goto exit;
+        goto exit; // TODO: 수정
     }
 
     if (dir_len > PATH_MAX)
@@ -135,7 +135,7 @@ exit:
  *
  * @return int
  */
-int pmem_cleanup(void *addr, struct pmem_file **pfile_ptr)
+int pmem_free(void *addr, struct pmem_file **pfile_ptr)
 {
     if (munmap(addr, (*pfile_ptr)->current_size) != 0)
     {
@@ -156,28 +156,28 @@ int pmem_cleanup(void *addr, struct pmem_file **pfile_ptr)
     return SUCCESS;
 }
 
-/**
- * @brief Resize the file.
- *
- * @param pfile Pointer to the pmem_file struct.
- * @param size New size of the file.
- * @return int
- */
-static int pmem_recreate_file(struct pmem_file **pfile_ptr, size_t size)
-{
-    int status = -1;
-    int err = pmem_create_tmpfile((*pfile_ptr)->dir, pfile_ptr);
-    if (err)
-        goto exit;
-    if ((errno = posix_fallocate((*pfile_ptr)->fd, 0, (off_t)size)) != 0)
-        goto exit;
-    close((*pfile_ptr)->fd);
-    (*pfile_ptr)->offset = 0;
-    (*pfile_ptr)->current_size = size;
-    status = 0;
-exit:
-    return status;
-}
+// /**
+//  * @brief Resize the file.
+//  *
+//  * @param pfile Pointer to the pmem_file struct.
+//  * @param size New size of the file.
+//  * @return int
+//  */
+// static int pmem_recreate_file(struct pmem_file **pfile_ptr, size_t size)
+// {
+//     int status = -1;
+//     int err = pmem_create_tmpfile((*pfile_ptr)->dir, pfile_ptr);
+//     if (err)
+//         goto exit;
+//     if ((errno = posix_fallocate((*pfile_ptr)->fd, 0, (off_t)size)) != 0)
+//         goto exit;
+//     close((*pfile_ptr)->fd);
+//     (*pfile_ptr)->offset = 0;
+//     (*pfile_ptr)->current_size = size;
+//     status = 0;
+// exit:
+//     return status;
+// }
 
 /**
  * @brief Delete all files in the directory.

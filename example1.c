@@ -16,10 +16,10 @@ int main()
 
     struct pmem_file *pfile;
     void *addr;
-    addr = request_pmem(dir, NULL, 1024000000 * sizeof(char), &pfile);
+    addr = pmem_malloc(dir, NULL, 1024000000 * sizeof(char), &pfile);
     if (addr == NULL)
     {
-        printf("[%s] request_pmem failed\n", __func__);
+        printf("[%s] pmem_malloc failed\n", __func__);
         goto exit;
     }
     for (int i = 0; i < 1024000000; i++)
@@ -34,19 +34,7 @@ int main()
     strcpy(addr, str2);
     printf("[%s] addr: %s\n", __func__, (char *)addr);
 
-    // Check content inside file and print it
-    FILE *fp = fopen(pfile->fullpath, "r");
-    if (fp == NULL)
-    {
-        printf("[%s] fopen failed\n", __func__);
-        goto exit;
-    }
-    char buf[100];
-    fgets(buf, 100, fp);
-    printf("[%s] buf: %s\n", __func__, buf);
-    fclose(fp);
-
-    pmem_cleanup(addr, &pfile);
+    pmem_free(addr, &pfile);
     return 0;
 exit:
     return -1;
