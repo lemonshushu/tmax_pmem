@@ -15,7 +15,7 @@ int main()
     pmem_cleanup_all(dir);
 
     struct pmem_file *pfile;
-    volatile void *addr;
+    void *addr;
     addr = request_pmem(dir, NULL, 1024000000 * sizeof(char), &pfile);
     if (addr == NULL)
     {
