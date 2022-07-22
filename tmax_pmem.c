@@ -8,7 +8,6 @@
 #include <stddef.h>
 #include <limits.h>
 #include <signal.h>
-#include <pthread.h>
 #include <sys/mman.h>
 #include <errno.h>
 #include <fcntl.h>

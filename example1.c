@@ -16,7 +16,7 @@ int main()
 
     struct pmem_file *pfile;
     void *addr;
-    addr = request_pmem(dir, NULL, 1024 * sizeof(char), &pfile);
+    addr = request_pmem(dir, NULL, 1024000000 * sizeof(char), &pfile);
     if (addr == NULL)
     {
         printf("[%s] request_pmem failed\n", __func__);
