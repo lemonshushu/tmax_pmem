@@ -15,12 +15,16 @@ int main()
     pmem_cleanup_all(dir);
 
     struct pmem_file *pfile;
-    void *addr;
+    volatile void *addr;
     addr = request_pmem(dir, NULL, 1024000000 * sizeof(char), &pfile);
     if (addr == NULL)
     {
         printf("[%s] request_pmem failed\n", __func__);
         goto exit;
+    }
+    for (int i = 0; i < 1024000000; i++)
+    {
+        ((char *)addr)[i] = 'a';
     }
 
     strcpy(addr, str1);
