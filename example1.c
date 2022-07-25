@@ -11,20 +11,21 @@ int main()
     const char *dir = "/pmem/tmp/";
     const char *str1 = "Hello World";
     const char *str2 = "Changed String";
+    int i;
 
     pmem_cleanup_all(dir);
 
     struct pmem_file *pfile;
-    void *addr;
-    addr = pmem_malloc(dir, NULL, 1024000000 * sizeof(char), &pfile);
+    char *addr;
+    addr = (char *)pmem_malloc(dir, NULL, 1024000000 * sizeof(char), &pfile);
     if (addr == NULL)
     {
         printf("[%s] pmem_malloc failed\n", __func__);
         goto exit;
     }
-    for (int i = 0; i < 1024000000; i++)
+    for (i = 0; i < 1024000000; i++)
     {
-        ((char *)addr)[i] = 'a';
+        addr[i] = 'a';
     }
 
     strcpy(addr, str1);

@@ -43,14 +43,11 @@ enum
 struct pmem_file
 {
     int fd;              // file descriptor
-    off_t offset;        // offset of the file
     size_t current_size; // current size of the file
-    char *dir;           // directory of the file
     char *fullpath;      // full path of the file
 };
 
-void *request_pmem(const char *dir, void *addr, size_t size, struct pmem_file **pfile_ptr);
+void *pmem_malloc(const char *dir, void *addr, size_t size, struct pmem_file **pfile_ptr);
 int pmem_create_tmpfile(const char *dir, struct pmem_file **pfile_ptr);
-int pmem_cleanup(void *addr, struct pmem_file **pfile_ptr);
-static int pmem_recreate_file(struct pmem_file **pfile_ptr, size_t size);
+int pmem_free(void *addr, struct pmem_file **pfile_ptr);
 int pmem_cleanup_all(const char *dir);

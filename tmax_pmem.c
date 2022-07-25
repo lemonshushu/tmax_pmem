@@ -28,28 +28,21 @@
 void *pmem_malloc(const char *dir, void *addr, size_t size, struct pmem_file **pfile_ptr)
 {
     int oerrno;
+    int err;
 
     *pfile_ptr = (struct pmem_file *)malloc(sizeof(struct pmem_file));
-    int err = pmem_create_tmpfile(dir, pfile_ptr);
-    if (err)
-        goto exit;
-
-    if (ftruncate((*pfile_ptr)->fd, size)) // set the size of the file
-        goto exit;
-
     if (*pfile_ptr == NULL)
     {
         err = ERROR_MALLOC;
         goto exit;
     }
-    (*pfile_ptr)->offset = 0;
-    (*pfile_ptr)->current_size = size;
-    (*pfile_ptr)->dir = strdup(dir);
-    if (!(*pfile_ptr)->dir)
-    {
-        err = ERROR_MALLOC;
+
+    err = pmem_create_tmpfile(dir, pfile_ptr);
+    if (err)
         goto exit;
-    }
+
+    if (ftruncate((*pfile_ptr)->fd, size)) // set the size of the file
+        goto exit;
 
     // Map the file to the virtual memory
     addr = mmap(addr, size, PROT_READ | PROT_WRITE, MAP_SHARED, (*pfile_ptr)->fd, 0);
@@ -58,6 +51,8 @@ void *pmem_malloc(const char *dir, void *addr, size_t size, struct pmem_file **p
         err = ERROR_MMAP;
         goto exit;
     }
+
+    (*pfile_ptr)->current_size = size;
 
     return addr;
 
@@ -88,7 +83,7 @@ int pmem_create_tmpfile(const char *dir, struct pmem_file **pfile_ptr)
     if (access(dir, F_OK))
     {
         err = ERROR_INVALID;
-        goto exit; // TODO: 수정
+        return err;
     }
 
     if (dir_len > PATH_MAX)
@@ -149,35 +144,11 @@ int pmem_free(void *addr, struct pmem_file **pfile_ptr)
         printf("[%s] unlink failed\n", __func__);
         return ERROR_RUNTIME;
     }
-    free((*pfile_ptr)->dir);
     free((*pfile_ptr)->fullpath);
     free(*pfile_ptr);
 
     return SUCCESS;
 }
-
-// /**
-//  * @brief Resize the file.
-//  *
-//  * @param pfile Pointer to the pmem_file struct.
-//  * @param size New size of the file.
-//  * @return int
-//  */
-// static int pmem_recreate_file(struct pmem_file **pfile_ptr, size_t size)
-// {
-//     int status = -1;
-//     int err = pmem_create_tmpfile((*pfile_ptr)->dir, pfile_ptr);
-//     if (err)
-//         goto exit;
-//     if ((errno = posix_fallocate((*pfile_ptr)->fd, 0, (off_t)size)) != 0)
-//         goto exit;
-//     close((*pfile_ptr)->fd);
-//     (*pfile_ptr)->offset = 0;
-//     (*pfile_ptr)->current_size = size;
-//     status = 0;
-// exit:
-//     return status;
-// }
 
 /**
  * @brief Delete all files in the directory.
